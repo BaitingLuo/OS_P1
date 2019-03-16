@@ -130,7 +130,7 @@ int main(int argc, char* argv[]){
     double Tcs; //time of context switch
     double Alpha;
     double T_slice;
-    string RRadd; 
+    string RRadd = "end"; 
     string Process_name[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"}; 
     if (argc == 9){
         seed = atof(argv[1]);
@@ -141,6 +141,19 @@ int main(int argc, char* argv[]){
         Alpha = atof(argv[6]);
         T_slice = atof(argv[7]);
         RRadd = argv[8];
+    }
+    else if (argc == 8){
+        seed = atof(argv[1]);
+        lambda = atof(argv[2]);
+        bound = atof(argv[3]);
+        number_process = atof(argv[4]);
+        Tcs = atof(argv[5]);
+        Alpha = atof(argv[6]);
+        T_slice = atof(argv[7]);        
+    }
+    else{
+        perror( "ERROR: <invalid input>" );
+        return EXIT_FAILURE;
     }
 pair<map<string, vector<pair<int, int> > >,  map<string, int> > temp;
 ///////// SJF
