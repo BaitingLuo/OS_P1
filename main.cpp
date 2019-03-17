@@ -13,7 +13,9 @@
 #include <string>
 #include <queue>
 #include <math.h>
-using namespace std; 
+using namespace std;
+
+ostream simout;
 pair<map<string, vector<pair<int, int> > >,  map<string, int> > load_data(string Process_name[], double seed, double lambda, double bound, double number_process){
      map<string, vector<pair<int, int> > > burst_io_time_temp;
     map<string, int> arrival_time_temp;
@@ -131,7 +133,8 @@ int main(int argc, char* argv[]){
     double Alpha;
     double T_slice;
     string RRadd = "end"; 
-    string Process_name[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"}; 
+    string Process_name[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"};
+    simout.open("simout.txt");
     if (argc == 9){
         seed = atof(argv[1]);
         lambda = atof(argv[2]);
