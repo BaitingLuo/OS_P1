@@ -15,7 +15,7 @@
 #include <math.h>
 using namespace std;
 
-ostream simout;
+ofstream simout;
 pair<map<string, vector<pair<int, int> > >,  map<string, int> > load_data(string Process_name[], double seed, double lambda, double bound, double number_process){
      map<string, vector<pair<int, int> > > burst_io_time_temp;
     map<string, int> arrival_time_temp;
@@ -81,7 +81,7 @@ pair<map<string, vector<pair<int, int> > >,  map<string, int> > load_data(string
      
     
 }
-void SJF_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<string, int> arrival_time, double Tcs, double Alpha){
+void SJF_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<string, int> arrival_time, double Tcs, double Alpha, double lambda){
     /*for(map<string, vector<pair<int, int> > >::iterator it = burst_io_time.begin(); it != burst_io_time.end(); ++it) //iterate through burst_io_time
    {                                                                                                                    //io time for last burst is -1
       std::cout << it->first << " = "; // keys
@@ -92,7 +92,7 @@ void SJF_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
     
 }
 
-void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<string, int> arrival_time, double Tcs, double Alpha){
+void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<string, int> arrival_time, double Tcs, double Alpha, double lambda){
     /*for(map<string, vector<pair<int, int> > >::iterator it = burst_io_time.begin(); it != burst_io_time.end(); ++it) //iterate through burst_io_time
    {                                                                                                                    //io time for last burst is -1
       std::cout << it->first << " = "; // keys
@@ -161,10 +161,10 @@ int main(int argc, char* argv[]){
 pair<map<string, vector<pair<int, int> > >,  map<string, int> > temp;
 ///////// SJF
 temp = load_data(Process_name, seed, lambda, bound, number_process);
-SJF_Algorithm(temp.first, temp.second, Tcs, Alpha);
+SJF_Algorithm(temp.first, temp.second, Tcs, Alpha, lambda);
 ///////// SRT
 temp = load_data(Process_name, seed, lambda, bound, number_process);
-SRT_Algorithm(temp.first, temp.second, Tcs, Alpha);
+SRT_Algorithm(temp.first, temp.second, Tcs, Alpha, lambda);
 ///////// FCFS
 temp = load_data(Process_name, seed, lambda, bound, number_process);
 FCFS_Algorithm(temp.first, temp.second, Tcs);
