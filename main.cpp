@@ -50,7 +50,7 @@ pair<map<string, vector<pair<int, int> > >,  map<string, int> > load_data(string
   double sum = 0;     
   double burst_times = 0;
   int count = 0;
-  int iterations = 10000000000;    
+  int iterations = 1000000000;    
   pair<int, int> temp;
   srand48( seed );
   for ( int i = 0 ; i < iterations ; i++ )
