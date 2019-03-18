@@ -59,12 +59,9 @@ pair<map<string, vector<pair<int, int> > >,  map<string, int> > load_data(string
     double r = drand48();   
     double x = -log( r ) / lambda;  
 
-    if ( x > bound ) { i--; continue; }
+    if ( x > bound && i != 1) { i--; continue; }
     //if ( i < 20 ) printf( "r is %lf\n", r );
     //if ( i < 20 ) printf( "x is %lf\n", x );
-    sum += x;
-    if ( i == 0 || x < min ) { min = x; }
-    if ( i == 0 || x > max ) { max = x; }
     if (i == 0){
         //printf("arrival time for %s: %lf\n",Process_name[count].c_str(),floor(x));
         //printf( "arrival time: %lf\n", floor(x) );
