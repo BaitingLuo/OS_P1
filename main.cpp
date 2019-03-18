@@ -47,9 +47,9 @@ void print_queue( priority_queue<pair<int, process>, vector<pair<int, process> >
 pair<map<string, vector<pair<int, int> > >,  map<string, int> > load_data(string Process_name[], double seed, double lambda, double bound, double number_process){
      map<string, vector<pair<int, int> > > burst_io_time_temp;
     map<string, int> arrival_time_temp;
-    double min = 0;     
-  double max = 0;    
-  double sum = 0;     
+  //  double min = 0;
+  //double max = 0;
+  //double sum = 0;
   double burst_times = 0;
   int count = 0;
   int iterations = 1000000000;    
@@ -122,7 +122,7 @@ pair<int, vector<int> > nexteventtime(const map<string, int> & arrival_time, pai
     if(ans_duplicate.size()==1) return make_pair(ans_time, ans_duplicate);
     vector<int> ans_type;
     ans_type.push_back(ans_duplicate[0]);
-    for (int i = 1; i < ans_duplicate.size(); i++) {
+    for (unsigned i = 1; i < ans_duplicate.size(); i++) {
         if(ans_duplicate[i]!=ans_duplicate[i-1]) ans_type.push_back(ans_duplicate[i]);
     }
     return make_pair(ans_time, ans_type);
@@ -138,21 +138,34 @@ void timePasses(int nextEventtime, map<string, int>& arrival_time, pair<string, 
         itr->second = itr->second - nextEventtime;
     }
 }
+
+void updateStarttime(map<string, vector<pair<int, int> > >& waitTime, string processName, int time){
+    waitTime[processName].push_back(make_pair(time, 0));
+}
+
+void updateEndtime(map<string, vector<pair<int, int> > >& waitTime, string processName, int time, double Tcs){
+    waitTime[processName][waitTime[processName].size()-1].second = time - Tcs/2;
+}
 void SJF_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<string, int> arrival_time, double Tcs, double Alpha, double lambda){
+    //write to file
     vector<float> allBurst;
     for (map<string, vector<pair<int, int> > >::iterator itr = burst_io_time.begin(); itr != burst_io_time.end(); itr++) {
-        for (int i = 0; i < itr->second.size(); i++) {
+        for (unsigned i = 0; i < itr->second.size(); i++) {
             allBurst.push_back((float)itr->second[i].first);
         }
     }
-    float average = accumulate( allBurst.begin(), allBurst.end(), 0.0)/allBurst.size();
+    float averageBurst = accumulate( allBurst.begin(), allBurst.end(), 0.0)/allBurst.size();
+    simout << fixed << setprecision(3);
     simout<<"Algorithm SJF"<<endl;
-    simout<<"-- average CPU burst time: "<<average<<" ms"<<endl;
+    simout<<"-- average CPU burst time: "<<averageBurst<<" ms"<<endl;
+    
     priority_queue<pair<int, process>, vector<pair<int, process> >, CompareDist > readyPQ;
     map<string, int> blockedIO;
     pair<string, int> runningProcess;
     pair<string, int> contextSwitch;
     map<string, int> estimatedTime = arrival_time;
+    map<string, vector<pair<int, int> > > waitTime;
+    int numContext = 0;
     for (map<string, int>::iterator itr =  estimatedTime.begin(); itr != estimatedTime.end(); itr++) {
         itr->second = 1/lambda;
     }
@@ -164,18 +177,20 @@ void SJF_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
     while (true) {
         bool contSwi = false;
         bool arriveStartcup = false;
+        
         pair<int, vector<int> > nextEvent = nexteventtime(arrival_time, contextSwitch, runningProcess, blockedIO);
         int nextEventtime = nextEvent.first;
         time = time + nextEventtime;
         timePasses(nextEventtime, arrival_time, contextSwitch, runningProcess, blockedIO);
         vector<int> nextEventtype = nextEvent.second;//1 for a process arriving, 2 for a process starting to use cpu, 3 for a cpu burst ending, 4 for I/O complete
-        for (int i = 0; i < nextEventtype.size(); i++) {
+        for (unsigned i = 0; i < nextEventtype.size(); i++) {
             if(nextEventtype[i] == 1){
                 if(nextEventtype.size()>1 && nextEventtype[i+1] == 2){
                     arriveStartcup = true;
                 }else{
                     for (map<string, int>::iterator itr = arrival_time.begin(); itr != arrival_time.end();) {
                         if(itr -> second == 0){
+                            updateStarttime(waitTime, itr->first, time);
                             pair<int, process> arrivingProcess;
                             int firstBurst = 1 / lambda;
                             arrivingProcess.first = firstBurst;
@@ -202,6 +217,7 @@ void SJF_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                     contSwi = true;
                 }
                 else{
+                    updateEndtime(waitTime, contextSwitch.first, time, Tcs);
                     runningProcess = contextSwitch;
                     runningProcess.second = burst_io_time[runningProcess.first][0].first;
                     contextSwitch.second = 10000000;
@@ -251,6 +267,7 @@ void SJF_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
             else if(nextEventtype[i] == 4){
                 for (map<string, int>::iterator itr = blockedIO.begin(); itr != blockedIO.end();) {
                     if(itr->second == 0){
+                        updateStarttime(waitTime, itr->first, time);
                         string processName = itr->first;
                         int tau = estimatedTime[processName];
                         process processToadd = make_pair(processName, burst_io_time[itr->first]);
@@ -292,6 +309,7 @@ void SJF_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
             arriveStartcup = false;
             for (map<string, int>::iterator itr = arrival_time.begin(); itr != arrival_time.end();) {
                 if(itr -> second == 0){
+                    updateStarttime(waitTime, itr->first, time);
                     pair<int, process> arrivingProcess;
                     int firstBurst = 1 / lambda;
                     arrivingProcess.first = firstBurst;
@@ -319,6 +337,21 @@ void SJF_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
     }
 
     cout<<"time "<<time+Tcs/2<<"ms: Simulator ended for SJF [Q <empty>]";
+    vector<float> tmpWait;
+    for (map<string, vector<pair<int, int> > >:: iterator itr = waitTime.begin(); itr != waitTime.end(); itr++) {
+        //simout<<itr->first<<endl;
+        for (unsigned i = 0; i < itr->second.size(); i++) {
+            tmpWait.push_back((float)itr->second[i].second - (float)itr->second[i].first);
+            numContext++;
+           // simout<<itr->second[i].first<<" "<<itr->second[i].second<<endl;
+        }//simout<<endl;
+    }
+    float averageWaittime = accumulate( tmpWait.begin(), tmpWait.end(), 0.0)/tmpWait.size();
+    float averageTtime = averageWaittime + Tcs + averageBurst;
+    simout<<"-- average wait time: "<<averageWaittime<<" ms"<<endl;
+    simout<<"-- average turnaround time: "<<averageTtime<<" ms"<<endl;
+    simout<<"-- total number of context switches: "<<numContext<<endl;
+    simout<<"-- total number of preemptions: 0"<<endl;
     return;
 }
 
