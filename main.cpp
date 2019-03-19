@@ -357,7 +357,7 @@ void SJF_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
         }
     }
 
-    cout<<"time "<<time+Tcs/2<<"ms: Simulator ended for SJF [Q <empty>]";
+    cout<<"time "<<time+Tcs/2<<"ms: Simulator ended for SJF [Q <empty>]"<<endl;
     vector<float> tmpWait;
     for (map<string, vector<pair<int, int> > >:: iterator itr = waitTime.begin(); itr != waitTime.end(); itr++) {
         //simout<<itr->first<<endl;
@@ -376,32 +376,39 @@ void SJF_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
     return;
 }
 
+
+
+
 void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<string, int> arrival_time, double Tcs, double Alpha, double lambda){
-  /*  vector<float> allBurst;
+    vector<float> allBurst;
     for (map<string, vector<pair<int, int> > >::iterator itr = burst_io_time.begin(); itr != burst_io_time.end(); itr++) {
         for (unsigned i = 0; i < itr->second.size(); i++) {
             allBurst.push_back((float)itr->second[i].first);
         }
     }
     float average = accumulate( allBurst.begin(), allBurst.end(), 0.0)/allBurst.size();
-    simout<<"Algorithm SJF"<<endl;
+    simout<<"Algorithm SRT"<<endl;
     simout<<"-- average CPU burst time: "<<average<<" ms"<<endl;
     priority_queue<pair<int, process>, vector<pair<int, process> >, CompareDist > readyPQ;
     map<string, int> blockedIO;
     pair<string, int> runningProcess;
     pair<string, int> contextSwitch;
     map<string, int> estimatedTime = arrival_time;
+    map<string, vector<pair<int, int> > > burst_io_time_copy = burst_io_time;
     for (map<string, int>::iterator itr =  estimatedTime.begin(); itr != estimatedTime.end(); itr++) {
         itr->second = 1/lambda;
     }
     for (map<string, int>:: iterator itr = arrival_time.begin(); itr != arrival_time.end(); itr++) {
         cout<<"Process "<<itr->first<<" [NEW] (arrival time "<<itr->second<<" ms) "<<burst_io_time[itr->first].size()<<" CPU bursts"<<endl;
     }
-    cout<<"time 0ms: Simulator started for SJF [Q <empty>]"<<endl;
+    cout<<"time 0ms: Simulator started for SRT [Q <empty>]"<<endl;
     int time = 0;
+    bool preemption = false;
     while (true) {
+        
         bool contSwi = false;
         bool arriveStartcup = false;
+        
         pair<int, vector<int> > nextEvent = nexteventtime(arrival_time, contextSwitch, runningProcess, blockedIO);
         int nextEventtime = nextEvent.first;
         time = time + nextEventtime;
@@ -422,6 +429,15 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                             cout<<"time "<<time<<"ms: Process "<<itr->first<<" (tau "<<firstBurst<<"ms) arrived; added to ready queue [Q";
                             print_queue(readyPQ);
                             cout<<"]"<<endl;
+                            //check if preemptions
+                            if(runningProcess.first.size()>0 && firstBurst < estimatedTime[runningProcess.first] - (burst_io_time_copy[runningProcess.first][0].first-burst_io_time[runningProcess.first][0].first)){
+                                contextSwitch.first = "pending";
+                                contextSwitch.second = 2;
+                                burst_io_time[runningProcess.first][0].first = runningProcess.second;
+                                preemption = true;
+                                runningProcess.second = 10000000;
+
+                            }
                             if(((contextSwitch.second<0) || contextSwitch.second> 5000000) && ((runningProcess.second<0) || runningProcess.second> 5000000)){
                                 pair<int, process> processToadd = readyPQ.top();
                                 readyPQ.pop();
@@ -437,18 +453,72 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
             }
             else if(nextEventtype[i] == 2){
                 if(contextSwitch.first == "pending"){
+                    
                     contSwi = true;
                 }
                 else{
+                    int expectTime3;
+                    process afterProcess;
+
+                    if(runningProcess.first.size()>0 && burst_io_time.find(runningProcess.first)!=burst_io_time.end()){
+
+                        expectTime3 = estimatedTime[runningProcess.first] - (burst_io_time_copy[runningProcess.first][0].first-burst_io_time[runningProcess.first][0].first);
+ 
+                        afterProcess.first = runningProcess.first;
+ 
+                        afterProcess.second = burst_io_time[runningProcess.first];
+                    }
+                    if(preemption){
+
+                        preemption = false;
+                        readyPQ.push(make_pair(expectTime3, afterProcess));
+                    }
+                    string processTime = contextSwitch.first;
                     runningProcess = contextSwitch;
                     runningProcess.second = burst_io_time[runningProcess.first][0].first;
                     contextSwitch.second = 10000000;
-                    cout<<"time "<<time<<"ms: Process "<<runningProcess.first<<" started using the CPU for "<<runningProcess.second<<"ms burst [Q";
-                    print_queue(readyPQ);
-                    cout<<"]"<<endl;
+                    
+                    if(burst_io_time[processTime][0].first == burst_io_time_copy[processTime][0].first){
+                        if(time >= 0 && time <= 999){
+                            cout<<"time "<<time<<"ms: Process "<<runningProcess.first<<" started using the CPU for "<<runningProcess.second<<"ms burst [Q";
+                            print_queue(readyPQ);
+                            cout<<"]"<<endl;
+                        }
+                    }else{
+                        if(time >= 0 && time <= 999){
+                            cout<<"time "<<time<<"ms: Process "<<runningProcess.first<<" started using the CPU with "<<runningProcess.second<<"ms remaining [Q";
+                            print_queue(readyPQ);
+                            cout<<"]"<<endl;
+                        }
+                    }
+                    
+                    pair<int, process> top_process = readyPQ.top();
+
+                    int expectTime1 = estimatedTime[top_process.second.first] - (burst_io_time_copy[top_process.second.first][0].first-burst_io_time[top_process.second.first][0].first);
+                    int expectTime2 = estimatedTime[runningProcess.first] - (burst_io_time_copy[runningProcess.first][0].first-burst_io_time[runningProcess.first][0].first);
+                    if(expectTime1 < expectTime2 && !readyPQ.empty()){
+                        if(time >= 0 && time <= 999){
+                            cout<<"time "<<time<<"ms: Process "<<top_process.second.first<<" (tau "<<expectTime1<<"ms) will preempt "<<runningProcess.first<<" [Q";
+                            print_queue(readyPQ);
+                            cout<<"]"<<endl;
+                        }
+                        
+                        contextSwitch.first = "pending";
+                        contextSwitch.second = 2;
+                        preemption = true;
+                        runningProcess.second = 10000000;
+                        //readyPQ.push(make_pair(expectTime2, make_pair(runningProcess.first, burst_io_time[runningProcess.first])));
+                    }
+                    
                 }
+
             }
             else if(nextEventtype[i] == 3){
+                if(preemption) {
+                    cout<<"here?"<<endl;
+                    runningProcess.second = Tcs * 10;
+                    continue;
+                }
                 string processName = runningProcess.first;
                 runningProcess.second = 10000000;
                 vector<pair<int, int> > BItime = burst_io_time[processName];
@@ -460,26 +530,37 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                     print_queue(readyPQ);
                     cout<<"]"<<endl;
                     burst_io_time.erase(processName);
+                    burst_io_time_copy.erase(processName);
                 }else{
                     blockedIO.insert(addIO);
-                    int tau = ceil(Alpha *  BItime[0].first+ (1-Alpha) * estimatedTime[processName]);
+                    int tau = ceil(Alpha *  burst_io_time_copy[processName][0].first+ (1-Alpha) * estimatedTime[processName]);
                     estimatedTime[processName] = tau;
                     burst_io_time[processName].erase(burst_io_time[processName].begin());
+                    burst_io_time_copy[processName].erase(burst_io_time_copy[processName].begin());
                     if(burst_io_time[processName].size() == 1){
-                        cout<<"time "<<time<<"ms: Process "<<processName<<" completed a CPU burst; 1 burst to go [Q";
+                        if(time >= 0 && time <= 999){
+                            cout<<"time "<<time<<"ms: Process "<<processName<<" completed a CPU burst; 1 burst to go [Q";
+                            print_queue(readyPQ);
+                            cout<<"]"<<endl;
+                        }
+                        
+                    }else{
+                        if(time >= 0 && time <= 999){
+                            cout<<"time "<<time<<"ms: Process "<<processName<<" completed a CPU burst; "<<burst_io_time[processName].size()<<" bursts to go [Q";
+                            print_queue(readyPQ);
+                            cout<<"]"<<endl;
+                        }
+                        
+                    }
+                    if(time >= 0 && time <= 999){
+                        cout<<"time "<<time<<"ms: Recalculated tau = "<<tau<<"ms for process "<<processName<<" [Q";
                         print_queue(readyPQ);
                         cout<<"]"<<endl;
-                    }else{
-                        cout<<"time "<<time<<"ms: Process "<<processName<<" completed a CPU burst; "<<burst_io_time[processName].size()<<" bursts to go [Q";
+                        cout<<"time "<<time<<"ms: Process "<<processName<<" switching out of CPU; will block on I/O until time "<<time+BItime[0].second+Tcs/2<<"ms [Q";
                         print_queue(readyPQ);
                         cout<<"]"<<endl;
                     }
-                    cout<<"time "<<time<<"ms: Recalculated tau = "<<tau<<"ms for process "<<processName<<" [Q";
-                    print_queue(readyPQ);
-                    cout<<"]"<<endl;
-                    cout<<"time "<<time<<"ms: Process "<<processName<<" switching out of CPU; will block on I/O until time "<<time+BItime[0].second+Tcs/2<<"ms [Q";
-                    print_queue(readyPQ);
-                    cout<<"]"<<endl;
+                    
                 }
                 if(!readyPQ.empty()&&i == nextEventtype.size()-1){
                     contextSwitch.first = "pending";
@@ -492,15 +573,39 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                         string processName = itr->first;
                         int tau = estimatedTime[processName];
                         process processToadd = make_pair(processName, burst_io_time[itr->first]);
-                        readyPQ.push(make_pair(tau, processToadd));
-                        cout<<"time "<<time<<"ms: Process "<<processName<<" (tau "<<tau<<"ms) completed I/O; added to ready queue [Q";
-                        print_queue(readyPQ);
-                        cout<<"]"<<endl;
+                        int expectTime2 = -1;
+                        if(contextSwitch.second > 5000000 && burst_io_time_copy.find(runningProcess.first) != burst_io_time_copy.end()){
+                            expectTime2 = estimatedTime[runningProcess.first] - (burst_io_time_copy[runningProcess.first][0].first-runningProcess.second);
+                        }else if(contextSwitch.second < 5000000 &&burst_io_time_copy.size()>1){
+                            pair<int, process> top_process = readyPQ.top();
+                            expectTime2= estimatedTime[top_process.second.first] - (burst_io_time_copy[top_process.second.first][0].first-burst_io_time[top_process.second.first][0].first);
+                        }
+                        if(tau < expectTime2 && runningProcess.second<5000000 && contextSwitch.second > 5000000){
+                            contextSwitch.first = "pending";
+                            contextSwitch.second = 2;
+                            burst_io_time[runningProcess.first][0].first = runningProcess.second;
+                            if(time >= 0 && time <= 999){
+                                cout<<"time "<<time<<"ms: Process "<<processName<<" (tau "<<tau<<"ms) completed I/O and will preempt "<<runningProcess.first<<" [Q";
+                                print_queue(readyPQ);
+                                cout<<"]"<<endl;
+                            }
+                            
+                            runningProcess.second = 10000000;
+                            readyPQ.push(make_pair(tau, processToadd));
+                            preemption = true;
+                        }else{
+                            readyPQ.push(make_pair(tau, processToadd));
+                            if(time >= 0 && time <= 999){
+                                cout<<"time "<<time<<"ms: Process "<<processName<<" (tau "<<tau<<"ms) completed I/O; added to ready queue [Q";
+                                print_queue(readyPQ);
+                                cout<<"]"<<endl;
+                            }
+                            
+                        }
                         itr = blockedIO.erase(itr);
                     }else{
                         itr++;
                     }
-                    
                 }
                 if(contextSwitch.second>5000000 && runningProcess.second>5000000){
                     pair<int, process> processToadd = readyPQ.top();
@@ -556,8 +661,8 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
         }
     }
     
-    cout<<"time "<<time+Tcs/2<<"ms: Simulator ended for SJF [Q <empty>]\n";
-    return;*/
+    cout<<"time "<<time+Tcs/2<<"ms: Simulator ended for SRT [Q <empty>]"<<endl;
+    return;
     /*for(map<string, vector<pair<int, int> > >::iterator it = burst_io_time.begin(); it != burst_io_time.end(); ++it) //iterate through burst_io_time
    {                                                                                                                    //io time for last burst is -1
       std::cout << it->first << " = "; // keys
@@ -627,6 +732,7 @@ pair<map<string, vector<pair<int, int> > >,  map<string, int> > temp;
 ///////// SJF
 temp = load_data(Process_name, seed, lambda, bound, number_process);
 SJF_Algorithm(temp.first, temp.second, Tcs, Alpha, lambda);
+cout<<end;
 ///////// SRT
 temp = load_data(Process_name, seed, lambda, bound, number_process);
 SRT_Algorithm(temp.first, temp.second, Tcs, Alpha, lambda);
