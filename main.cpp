@@ -732,7 +732,7 @@ pair<map<string, vector<pair<int, int> > >,  map<string, int> > temp;
 ///////// SJF
 temp = load_data(Process_name, seed, lambda, bound, number_process);
 SJF_Algorithm(temp.first, temp.second, Tcs, Alpha, lambda);
-cout<<end;
+cout<<endl;
 ///////// SRT
 temp = load_data(Process_name, seed, lambda, bound, number_process);
 SRT_Algorithm(temp.first, temp.second, Tcs, Alpha, lambda);
