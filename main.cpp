@@ -389,12 +389,24 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
     float average = accumulate( allBurst.begin(), allBurst.end(), 0.0)/allBurst.size();
     simout<<"Algorithm SRT"<<endl;
     simout<<"-- average CPU burst time: "<<average<<" ms"<<endl;
+    int cpu_burt_total = 0;
+    int total_process = 0;
+    int numContext = 0;
+    for (map<string, vector<pair<int, int> > >::iterator itr = burst_io_time.begin(); itr != burst_io_time.end(); itr++) {
+        for (int i = 0; i < itr->second.size(); i++) {
+            //simout<<itr->second[i].first<<" "<<itr->second[i].second<<endl;
+            cpu_burt_total+=itr->second[i].first;
+            total_process++;
+            numContext++;
+        }
+    }
     priority_queue<pair<int, process>, vector<pair<int, process> >, CompareDist > readyPQ;
     map<string, int> blockedIO;
     pair<string, int> runningProcess;
     pair<string, int> contextSwitch;
     map<string, int> estimatedTime = arrival_time;
     map<string, vector<pair<int, int> > > burst_io_time_copy = burst_io_time;
+     map<string, vector<pair<int, int> > > waitTime;
     for (map<string, int>::iterator itr =  estimatedTime.begin(); itr != estimatedTime.end(); itr++) {
         itr->second = 1/lambda;
     }
@@ -421,6 +433,7 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                 }else{
                     for (map<string, int>::iterator itr = arrival_time.begin(); itr != arrival_time.end();) {
                         if(itr -> second == 0){
+                            updateStarttime(waitTime, itr->first, time);
                             pair<int, process> arrivingProcess;
                             int firstBurst = 1 / lambda;
                             arrivingProcess.first = firstBurst;
@@ -431,6 +444,7 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                             cout<<"]"<<endl;
                             //check if preemptions
                             if(runningProcess.first.size()>0 && firstBurst < estimatedTime[runningProcess.first] - (burst_io_time_copy[runningProcess.first][0].first-burst_io_time[runningProcess.first][0].first)){
+                                numContext++;
                                 contextSwitch.first = "pending";
                                 contextSwitch.second = 2;
                                 burst_io_time[runningProcess.first][0].first = runningProcess.second;
@@ -506,6 +520,7 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                         contextSwitch.first = "pending";
                         contextSwitch.second = 2;
                         preemption = true;
+                        numContext++;
                         runningProcess.second = 10000000;
                         //readyPQ.push(make_pair(expectTime2, make_pair(runningProcess.first, burst_io_time[runningProcess.first])));
                     }
@@ -519,6 +534,7 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                     runningProcess.second = Tcs * 10;
                     continue;
                 }
+                updateEndtime(waitTime, runningProcess.first, time, Tcs);
                 string processName = runningProcess.first;
                 runningProcess.second = 10000000;
                 vector<pair<int, int> > BItime = burst_io_time[processName];
@@ -570,6 +586,7 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
             else if(nextEventtype[i] == 4){
                 for (map<string, int>::iterator itr = blockedIO.begin(); itr != blockedIO.end();) {
                     if(itr->second == 0){
+                        updateStarttime(waitTime, itr->first, time);
                         string processName = itr->first;
                         int tau = estimatedTime[processName];
                         process processToadd = make_pair(processName, burst_io_time[itr->first]);
@@ -581,6 +598,7 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                             expectTime2= estimatedTime[top_process.second.first] - (burst_io_time_copy[top_process.second.first][0].first-burst_io_time[top_process.second.first][0].first);
                         }
                         if(tau < expectTime2 && runningProcess.second<5000000 && contextSwitch.second > 5000000){
+                            numContext++;
                             contextSwitch.first = "pending";
                             contextSwitch.second = 2;
                             burst_io_time[runningProcess.first][0].first = runningProcess.second;
@@ -635,6 +653,7 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
             arriveStartcup = false;
             for (map<string, int>::iterator itr = arrival_time.begin(); itr != arrival_time.end();) {
                 if(itr -> second == 0){
+                    updateStarttime(waitTime, itr->first, time);
                     pair<int, process> arrivingProcess;
                     int firstBurst = 1 / lambda;
                     arrivingProcess.first = firstBurst;
@@ -655,12 +674,31 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                 }
             }
         }
+        
         if(readyPQ.empty() && blockedIO.empty() && runningProcess.second>5000000 && contextSwitch.second>5000000)
         {
             break;
         }
     }
+    int process_total_time = 0;
+    for (map<string, vector<pair<int, int> > >:: iterator itr = waitTime.begin(); itr != waitTime.end(); itr++) {
+        for (unsigned i = 0; i < itr->second.size(); i++) {
+            //tmpWait.push_back((float)itr->second[i].second - (float)itr->second[i].first);
+            //numContext++;
+            //simout<<itr->second[i].first<<" "<<itr->second[i].second<<endl;
+            process_total_time+=itr->second[i].second-itr->second[i].first;
+        }
+    }
+    float ttime;
+    ttime = (process_total_time-cpu_burt_total)/(float)total_process + average + Tcs;
+    simout<<"-- average turnaround time: "<<ttime<<" ms"<<endl;
+    simout<<"-- total number of context switches: "<<numContext<<endl;
+    simout<<"-- total number of preemptions: "<<numContext-total_process<<endl;
+   /* simout<<"process_total_time "<<process_total_time<<endl;
+    simout<<"cpu_burt_total "<<cpu_burt_total<<endl;
+    simout<<"total_process "<<total_process<<endl;
     
+    simout<<"-- total number of context switches: "<<(process_total_time-cpu_burt_total)/(float)total_process<<endl;*/
     cout<<"time "<<time+Tcs/2<<"ms: Simulator ended for SRT [Q <empty>]"<<endl;
     return;
     /*for(map<string, vector<pair<int, int> > >::iterator it = burst_io_time.begin(); it != burst_io_time.end(); ++it) //iterate through burst_io_time
