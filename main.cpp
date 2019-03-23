@@ -15,6 +15,7 @@
 #include <math.h>
 #include <queue>
 #include <numeric>
+#include <assert.h>
 using namespace std;
 
 ofstream simout;
@@ -170,7 +171,11 @@ void SJF_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
         itr->second = 1/lambda;
     }
     for (map<string, int>:: iterator itr = arrival_time.begin(); itr != arrival_time.end(); itr++) {
-        cout<<"Process "<<itr->first<<" [NEW] (arrival time "<<itr->second<<" ms) "<<burst_io_time[itr->first].size()<<" CPU bursts"<<endl;
+        if(burst_io_time[itr->first].size()==1){
+            cout<<"Process "<<itr->first<<" [NEW] (arrival time "<<itr->second<<" ms) "<<burst_io_time[itr->first].size()<<" CPU burst"<<endl;
+        }else{
+            cout<<"Process "<<itr->first<<" [NEW] (arrival time "<<itr->second<<" ms) "<<burst_io_time[itr->first].size()<<" CPU bursts"<<endl;
+        }
     }
     cout<<"time 0ms: Simulator started for SJF [Q <empty>]"<<endl;
     int time = 0;
@@ -393,7 +398,7 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
     int total_process = 0;
     int numContext = 0;
     for (map<string, vector<pair<int, int> > >::iterator itr = burst_io_time.begin(); itr != burst_io_time.end(); itr++) {
-        for (int i = 0; i < itr->second.size(); i++) {
+        for (unsigned i = 0; i < itr->second.size(); i++) {
             //simout<<itr->second[i].first<<" "<<itr->second[i].second<<endl;
             cpu_burt_total+=itr->second[i].first;
             total_process++;
@@ -411,7 +416,11 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
         itr->second = 1/lambda;
     }
     for (map<string, int>:: iterator itr = arrival_time.begin(); itr != arrival_time.end(); itr++) {
-        cout<<"Process "<<itr->first<<" [NEW] (arrival time "<<itr->second<<" ms) "<<burst_io_time[itr->first].size()<<" CPU bursts"<<endl;
+        if(burst_io_time[itr->first].size()==1){
+            cout<<"Process "<<itr->first<<" [NEW] (arrival time "<<itr->second<<" ms) "<<burst_io_time[itr->first].size()<<" CPU burst"<<endl;
+        }else{
+            cout<<"Process "<<itr->first<<" [NEW] (arrival time "<<itr->second<<" ms) "<<burst_io_time[itr->first].size()<<" CPU bursts"<<endl;
+        }
     }
     cout<<"time 0ms: Simulator started for SRT [Q <empty>]"<<endl;
     int time = 0;
@@ -473,13 +482,9 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                 else{
                     int expectTime3;
                     process afterProcess;
-
                     if(runningProcess.first.size()>0 && burst_io_time.find(runningProcess.first)!=burst_io_time.end()){
-
                         expectTime3 = estimatedTime[runningProcess.first] - (burst_io_time_copy[runningProcess.first][0].first-burst_io_time[runningProcess.first][0].first);
- 
                         afterProcess.first = runningProcess.first;
- 
                         afterProcess.second = burst_io_time[runningProcess.first];
                     }
                     if(preemption){
@@ -602,6 +607,7 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                             contextSwitch.first = "pending";
                             contextSwitch.second = 2;
                             burst_io_time[runningProcess.first][0].first = runningProcess.second;
+                            readyPQ.push(make_pair(tau, processToadd));
                             if(time >= 0 && time <= 999){
                                 cout<<"time "<<time<<"ms: Process "<<processName<<" (tau "<<tau<<"ms) completed I/O and will preempt "<<runningProcess.first<<" [Q";
                                 print_queue(readyPQ);
@@ -609,7 +615,7 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                             }
                             
                             runningProcess.second = 10000000;
-                            readyPQ.push(make_pair(tau, processToadd));
+                            
                             preemption = true;
                         }else{
                             readyPQ.push(make_pair(tau, processToadd));
@@ -674,7 +680,6 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                 }
             }
         }
-        
         if(readyPQ.empty() && blockedIO.empty() && runningProcess.second>5000000 && contextSwitch.second>5000000)
         {
             break;
@@ -683,17 +688,17 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
     int process_total_time = 0;
     for (map<string, vector<pair<int, int> > >:: iterator itr = waitTime.begin(); itr != waitTime.end(); itr++) {
         for (unsigned i = 0; i < itr->second.size(); i++) {
-            //tmpWait.push_back((float)itr->second[i].second - (float)itr->second[i].first);
-            //numContext++;
-            //simout<<itr->second[i].first<<" "<<itr->second[i].second<<endl;
             process_total_time+=itr->second[i].second-itr->second[i].first;
         }
     }
     float ttime;
     ttime = (process_total_time-cpu_burt_total)/(float)total_process + average + Tcs;
+    int numpreemptions = numContext-total_process;
+    float wtime = ttime - average - Tcs - numpreemptions*1.5*Tcs/total_process;
+    simout<<"-- average wait time: "<<wtime<<" ms"<<endl;
     simout<<"-- average turnaround time: "<<ttime<<" ms"<<endl;
     simout<<"-- total number of context switches: "<<numContext<<endl;
-    simout<<"-- total number of preemptions: "<<numContext-total_process<<endl;
+    simout<<"-- total number of preemptions: "<<numpreemptions<<endl;
    /* simout<<"process_total_time "<<process_total_time<<endl;
     simout<<"cpu_burt_total "<<cpu_burt_total<<endl;
     simout<<"total_process "<<total_process<<endl;
@@ -701,25 +706,247 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
     simout<<"-- total number of context switches: "<<(process_total_time-cpu_burt_total)/(float)total_process<<endl;*/
     cout<<"time "<<time+Tcs/2<<"ms: Simulator ended for SRT [Q <empty>]"<<endl;
     return;
-    /*for(map<string, vector<pair<int, int> > >::iterator it = burst_io_time.begin(); it != burst_io_time.end(); ++it) //iterate through burst_io_time
-   {                                                                                                                    //io time for last burst is -1
-      std::cout << it->first << " = "; // keys
-      for(unsigned i=0; i<it->second.size(); i++)  // values vec
-         std::cout << it->second[i].first << "-" << it->second[i].second << "\n";
-      std::cout << std::endl;
-   }*/
     
 }
+
+void output_readyqueue(std::vector<std::string> ready_queue){
+  std::cout << " [Q";
+  if(ready_queue.size() == 0){
+    std::cout << " <empty>]" << std::endl;
+  }
+  else{
+    for(unsigned int i = 0; i < ready_queue.size(); i++){
+      std::cout << " " << ready_queue[i];
+    }
+    std::cout << "]\n";
+  }
+}
+
+
+
+
 void FCFS_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<string, int> arrival_time, double Tcs){
-    /*for(map<string, vector<pair<int, int> > >::iterator it = burst_io_time.begin(); it != burst_io_time.end(); ++it) //iterate through burst_io_time
-   {                                                                                                                    //io time for last burst is -1
-      std::cout << it->first << " = "; // keys
-      for(unsigned i=0; i<it->second.size(); i++)  // values vec
-         std::cout << it->second[i].first << "-" << it->second[i].second << "\n";
-      std::cout << std::endl;
-   }*/
-    
+
+    // caculate the average burst time
+    vector<float> allBurst;
+    for (map<string, vector<pair<int, int> > >::iterator itr = burst_io_time.begin(); itr != burst_io_time.end(); itr++) {
+        for (unsigned i = 0; i < itr->second.size(); i++) {
+            allBurst.push_back((float)itr->second[i].first);
+        }
+    }
+    float average = accumulate( allBurst.begin(), allBurst.end(), 0.0)/allBurst.size();
+    simout<<"Algorithm FCFS"<<endl;
+    simout<<"-- average CPU burst time: "<<average<<" ms"<<endl;
+
+    int cpu_burt_total = 0;
+    int total_process = 0;
+    int numContext = 0;
+    std::map<std::string, std::vector<int> > begin_end_time;
+
+    for (map<string, vector<pair<int, int> > >::iterator itr = burst_io_time.begin(); itr != burst_io_time.end(); itr++) {
+        for (unsigned i = 0; i < itr->second.size(); i++) {
+            //simout<<itr->second[i].first<<" "<<itr->second[i].second<<endl;
+            cpu_burt_total+=itr->second[i].first;
+            total_process++;
+        }
+    }
+
+    // print the process arrivial time
+    pair<std::string, int> begin_process;
+    for(map<string, int>::iterator itr = arrival_time.begin(); itr != arrival_time.end(); itr++){
+        if(itr == arrival_time.begin()){
+            begin_process.first = itr->first;
+            begin_process.second = itr->second;
+        }
+        else{
+            if(itr->second < begin_process.second){
+                begin_process.first = itr->first;
+                begin_process.second = itr->second;
+            }
+        }
+
+        cout <<"Process "<<itr->first<<" [NEW] (arrival time "<<itr->second<<" ms) "<<burst_io_time[itr->first].size();
+        if(burst_io_time[itr->first].size() == 1){
+            std::cout <<" CPU burst"<<endl;
+        }
+        else{
+            std::cout <<" CPU bursts"<<endl;
+        }
+    }
+    // print FCFS begin message
+    cout <<"time 0ms: Simulator started for FCFS [Q <empty>]" << endl;
+
+    int time = begin_process.second;
+    unsigned int num_completed = 0;
+    string running_process = begin_process.first;
+    std::vector<std::string> ready_queue;
+    std::vector<pair<std::string, int> > Blocked_queue;
+
+    // 1: Process arrival time
+    // 2: Process starts using the CPU
+    // 3: Process finishes using the CPU
+    // 4: Process complete the IO
+    bool all_Block = false;
+    while(num_completed != arrival_time.size()){
+
+        if((ready_queue.size() != 0) || (time == begin_process.second)){
+
+            //pop the first element out of the ready queue
+            string running_process;
+            if(ready_queue.size() != 0){
+                running_process = ready_queue[0];
+            }
+            else{
+                running_process = begin_process.first;
+            }
+
+            // ready_queue.erase(ready_queue.begin());
+
+            //save the burst time of CPU and IO
+            int CPU_burst = burst_io_time[running_process][0].first;
+            int IO_burst = burst_io_time[running_process][0].second;
+
+            std::map<int, std::map<std::string, int> > arranged_time;
+            int process_arrive = time;
+            int process_leave = time + CPU_burst + Tcs;
+           
+            // 1. Save arrival time
+            for(map<string, int>::iterator itr = arrival_time.begin(); itr != arrival_time.end(); itr++){
+                if((itr->second >= process_arrive) && (itr->second < process_leave)){
+                    arranged_time[itr->second][itr->first] = 1; 
+                }
+            }
+
+            // 2. Save time of starting using CPU
+            arranged_time[process_arrive + 0.5*Tcs][running_process] = 2;
+
+            // 3. Save time of finishing using CPU
+            arranged_time[process_arrive + 0.5*Tcs + CPU_burst][running_process] = 3;
+
+            // 4. Save time of completing IO
+            for(unsigned int i = 0; i < Blocked_queue.size(); i++){
+                if((Blocked_queue[i].second >= process_arrive) && (Blocked_queue[i].second < process_leave)){
+                    arranged_time[Blocked_queue[i].second][Blocked_queue[i].first] = 4;
+                }
+            }
+
+
+            for(std::map<int, std::map<std::string, int> >::iterator itr = arranged_time.begin(); itr != arranged_time.end(); itr++){
+                for(std::map<std::string, int>::iterator itr2 = (itr->second).begin(); itr2 != (itr->second).end(); itr2++){
+                    if(itr2->second == 2){
+                        assert(ready_queue[0] == itr2->first);
+                        ready_queue.erase(ready_queue.begin());
+                        std::cout << "time " << itr->first << "ms: Process " << itr2->first << " started using the CPU for " << CPU_burst << "ms burst";
+                        begin_end_time[itr2->first].push_back(itr->first);
+                        output_readyqueue(ready_queue);
+                    }
+                }
+
+                for(std::map<std::string, int>::iterator itr2 = (itr->second).begin(); itr2 != (itr->second).end(); itr2++){
+                    if(itr2->second == 3){
+                        assert(running_process == itr2->first);
+                        // complete a CPU burst
+                        burst_io_time[running_process].erase(burst_io_time[running_process].begin());
+                        if(burst_io_time[itr2->first].size() != 0){
+                            std::cout << "time " << itr->first << "ms: Process " << itr2->first << " completed a CPU burst; " << burst_io_time[itr2->first].size();
+                            if(burst_io_time[itr2->first].size() == 1){
+                                std::cout << " burst to go";
+                            }
+                            else{
+                                std::cout << " bursts to go";
+                            }
+                            output_readyqueue(ready_queue);
+                        }
+
+                        // switch out of CPU
+                        if(IO_burst == -1){
+                            num_completed += 1;
+                            std::cout << "time " << itr->first << "ms: Process " << itr2->first << " terminated";
+                            output_readyqueue(ready_queue);
+                        }
+                        else{
+                            Blocked_queue.push_back(std::make_pair(itr2->first, itr->first + IO_burst + 0.5*Tcs));
+                            numContext++;
+                            std::cout << "time " << itr->first << "ms: Process " << itr2->first << " switching out of CPU; will block on I/O until time " << (itr->first + IO_burst + 0.5*Tcs)<< "ms";
+                            output_readyqueue(ready_queue);
+                        }
+                    }
+                }
+
+                for(std::map<std::string, int>::iterator itr2 = (itr->second).begin(); itr2 != (itr->second).end(); itr2++){
+                    if(itr2->second == 4){
+                        for(std::vector<pair<std::string, int> >::iterator block_itr = Blocked_queue.begin(); block_itr != Blocked_queue.end(); block_itr++){
+                            if(block_itr->first == itr2->first){
+                                assert(block_itr->second == itr->first);
+                                Blocked_queue.erase(block_itr);
+                                break;
+                            }
+                        }
+
+                        if(all_Block != true){
+                           ready_queue.push_back(itr2->first);
+                        }
+                        std::cout << "time " << itr->first << "ms: Process " << itr2->first << " completed I/O; added to ready queue";
+                        begin_end_time[itr2->first].push_back(itr->first);
+                        output_readyqueue(ready_queue); 
+                        all_Block = false;
+                    }
+                }
+                
+                for(std::map<std::string, int>::iterator itr2 = (itr->second).begin(); itr2 != (itr->second).end(); itr2++){
+                    if(itr2->second == 1){
+                        ready_queue.push_back(itr2->first);
+                        std::cout << "time " << itr->first << "ms: Process " << itr2->first << " arrived; added to ready queue";
+                        begin_end_time[itr2->first].push_back(itr->first);
+                        output_readyqueue(ready_queue);
+                    }
+                }
+
+            }
+
+            time = process_leave;
+        }
+        else{
+
+            int min_block = numeric_limits<int>::max();
+            for(unsigned int i = 0; i < Blocked_queue.size(); i++){
+                if(min_block > Blocked_queue[i].second){
+                    min_block = Blocked_queue[i].second;
+                    running_process = Blocked_queue[i].first;
+                }
+            }
+            time = min_block;
+            ready_queue.push_back(running_process);
+            all_Block = true;
+
+        }
+    }
+    numContext = numContext + 2;
+    int numpreemptions = numContext-total_process;
+    std::map<std::string, std::vector<int> >::iterator time_itr;
+    float time_total = 0;
+    int count = 0;
+    for(time_itr = begin_end_time.begin(); time_itr != begin_end_time.end(); time_itr++){
+        float time_each = 0;
+        std::vector<int> temp_time = time_itr->second;
+        sort(temp_time.begin(), temp_time.end());
+        for(unsigned int i = 0; i < temp_time.size()-1; i+=2){
+            time_each += (float)(temp_time[i+1] - (float)temp_time[i]);
+            count++;
+        }
+        time_total += time_each;
+    }
+    float averageWaittime = float(time_total)/count - 2;
+    float averageTtime = averageWaittime + Tcs + average;
+    simout<<"-- average wait time: "<<averageWaittime<<" ms"<<endl;
+    simout<<"-- average turnaround time: "<<averageTtime<<" ms"<<endl;
+    simout<<"-- total number of context switches: "<<numContext<<endl;
+    simout<<"-- total number of preemptions: "<<numpreemptions<<endl;
+
+    // print FCFS end message
+    std::cout <<"time " << time << "ms: Simulator ended for FCFS [Q <empty>]" << std::endl; 
 }
+
 void RR_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<string, int> arrival_time, double Tcs, double T_slice, string RRadd){
     /*for(map<string, vector<pair<int, int> > >::iterator it = burst_io_time.begin(); it != burst_io_time.end(); ++it) //iterate through burst_io_time
    {                                                                                                                   //io time for last burst is -1
@@ -766,20 +993,20 @@ int main(int argc, char* argv[]){
         perror( "ERROR: <invalid input>" );
         return EXIT_FAILURE;
     }
-pair<map<string, vector<pair<int, int> > >,  map<string, int> > temp;
-///////// SJF
-temp = load_data(Process_name, seed, lambda, bound, number_process);
-SJF_Algorithm(temp.first, temp.second, Tcs, Alpha, lambda);
-cout<<endl;
-///////// SRT
-temp = load_data(Process_name, seed, lambda, bound, number_process);
-SRT_Algorithm(temp.first, temp.second, Tcs, Alpha, lambda);
-///////// FCFS
-temp = load_data(Process_name, seed, lambda, bound, number_process);
-FCFS_Algorithm(temp.first, temp.second, Tcs);
-///////// RR
-temp = load_data(Process_name, seed, lambda, bound, number_process);
-RR_Algorithm(temp.first, temp.second, Tcs, T_slice, RRadd);
+    pair<map<string, vector<pair<int, int> > >,  map<string, int> > temp;
+    ///////// SJF
+    temp = load_data(Process_name, seed, lambda, bound, number_process);
+    SJF_Algorithm(temp.first, temp.second, Tcs, Alpha, lambda);
+    cout<<endl;
+    ///////// SRT
+    temp = load_data(Process_name, seed, lambda, bound, number_process);
+    SRT_Algorithm(temp.first, temp.second, Tcs, Alpha, lambda);
+    ///////// FCFS
+    temp = load_data(Process_name, seed, lambda, bound, number_process);
+    FCFS_Algorithm(temp.first, temp.second, Tcs);
+    ///////// RR
+    temp = load_data(Process_name, seed, lambda, bound, number_process);
+    RR_Algorithm(temp.first, temp.second, Tcs, T_slice, RRadd);
 
-    
+        
 }
