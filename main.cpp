@@ -448,9 +448,12 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
                             arrivingProcess.first = firstBurst;
                             arrivingProcess.second =make_pair(itr->first,burst_io_time[itr->first]) ;
                             readyPQ.push(arrivingProcess);
-                            cout<<"time "<<time<<"ms: Process "<<itr->first<<" (tau "<<firstBurst<<"ms) arrived; added to ready queue [Q";
-                            print_queue(readyPQ);
-                            cout<<"]"<<endl;
+                            if(time >= 0 && time <= 999){
+                                cout<<"time "<<time<<"ms: Process "<<itr->first<<" (tau "<<firstBurst<<"ms) arrived; added to ready queue [Q";
+                                print_queue(readyPQ);
+                                cout<<"]"<<endl;
+                            }
+                            
                             //check if preemptions
                             if(runningProcess.first.size()>0 && firstBurst < estimatedTime[runningProcess.first] - (burst_io_time_copy[runningProcess.first][0].first-burst_io_time[runningProcess.first][0].first)){
                                 numContext++;
@@ -694,7 +697,7 @@ void SRT_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<stri
     float ttime;
     ttime = (process_total_time-cpu_burt_total)/(float)total_process + average + Tcs;
     int numpreemptions = numContext-total_process;
-    float wtime = ttime - average - Tcs - numpreemptions*1.5*Tcs/total_process;
+    float wtime = (ttime * total_process - average * total_process - Tcs * numContext)/total_process;
     simout<<"-- average wait time: "<<wtime<<" ms"<<endl;
     simout<<"-- average turnaround time: "<<ttime<<" ms"<<endl;
     simout<<"-- total number of context switches: "<<numContext<<endl;
