@@ -991,6 +991,7 @@ void RR_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<strin
     int total_process = 0;
     int preempted = 0;
     std::map<std::string, std::vector<int> > begin_end_time;
+    std::map<std::string, std::vector<int> > begin_end_time2;
 
     for (map<string, vector<pair<int, int> > >::iterator itr = burst_io_time.begin(); itr != burst_io_time.end(); itr++) {
         for (unsigned i = 0; i < itr->second.size(); i++) {
@@ -1159,6 +1160,7 @@ void RR_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<strin
                         // assert(ready_queue[0] == itr2->first);
                         // ready_queue.erase(ready_queue.begin());
                         begin_end_time[itr2->first].push_back(itr->first);
+                        begin_end_time2[itr2->first].push_back(itr->first);
                         if(itr->first <= 999){
                             if(remaining[running_process] == false){
                                 std::cout << "time " << itr->first << "ms: Process " << itr2->first << " started using the CPU for " << CPU_burst << "ms burst";    
@@ -1201,9 +1203,10 @@ void RR_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<strin
 
                             if(preemption){
                                 preempted += 1;
-                                begin_end_time[itr2->first].push_back(itr->first);
+                                begin_end_time[itr2->first].push_back(itr->first+4);
+                                begin_end_time2[itr2->first].push_back(itr->first);
                             }
-                            
+
                             remaining[running_process] = true;
                         }
                         else{
@@ -1249,9 +1252,15 @@ void RR_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<strin
                         }
 
                         if(all_Block != true){
-                           ready_queue.push_back(itr2->first);
+                            if(RRadd == "BEGINNING"){
+                                ready_queue.insert(ready_queue.begin(),itr2->first);
+                            }
+                            else{
+                                ready_queue.push_back(itr2->first);
+                            }
                         }
-                        begin_end_time[itr2->first].push_back(itr->first);
+                        begin_end_time[itr2->first].push_back(itr->first+2);
+                        begin_end_time2[itr2->first].push_back(itr->first);
 
                         if(itr->first <= 999){
                             std::cout << "time " << itr->first << "ms: Process " << itr2->first << " completed I/O; added to ready queue";
@@ -1263,13 +1272,19 @@ void RR_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<strin
                 
                 for(std::map<std::string, int>::iterator itr2 = (itr->second).begin(); itr2 != (itr->second).end(); itr2++){
                     if(itr2->second == 1){
-                        ready_queue.push_back(itr2->first);
+                        if(RRadd == "BEGINNING"){
+                            ready_queue.insert(ready_queue.begin(),itr2->first);
+                        }
+                        else{
+                            ready_queue.push_back(itr2->first);                            
+                        }
+
                         if(itr->first <= 999){
                             std::cout << "time " << itr->first << "ms: Process " << itr2->first << " arrived; added to ready queue";
                             output_readyqueue(ready_queue);
                         }
-                        begin_end_time[itr2->first].push_back(itr->first);
-
+                        begin_end_time[itr2->first].push_back(itr->first+2);
+                        begin_end_time2[itr2->first].push_back(itr->first);
                     }
                 }
 
@@ -1333,8 +1348,21 @@ void RR_Algorithm(map<string, vector<pair<int, int> > > burst_io_time, map<strin
         }
         time_total += time_each;
     }
-    float averageWaittime = float(time_total)/count - 2;
-    float averageTtime = averageWaittime + Tcs + average;
+
+    float time_total2 = 0;
+    for(time_itr = begin_end_time2.begin(); time_itr != begin_end_time2.end(); time_itr++){
+        float time_each = 0;
+        std::vector<int> temp_time = time_itr->second;
+        sort(temp_time.begin(), temp_time.end());
+        for(unsigned int i = 0; i < temp_time.size()-1; i+=2){
+            time_each += (float)(temp_time[i+1] - (float)temp_time[i]);
+        }
+        time_total2 += time_each;
+    }
+
+    float averageWaittime = float(time_total)/total_process;
+    float averageTtime = float(time_total2)/total_process + Tcs + average - 2;
+
     simout<<"-- average wait time: "<<averageWaittime<<" ms"<<endl;
     simout<<"-- average turnaround time: "<<averageTtime<<" ms"<<endl;
     simout<<"-- total number of context switches: "<<(preempted + total_process)<<endl;
